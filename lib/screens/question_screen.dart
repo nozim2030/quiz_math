@@ -1,99 +1,139 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:quiz_app/core/utils/app_colors.dart';
 import 'package:quiz_app/provider/quest_provider.dart';
+import 'package:quiz_app/widgets/custom_answer.dart';
+import 'package:quiz_app/widgets/custom_text.dart';
 
 class QuizScreen extends StatelessWidget {
+  const QuizScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blueAccent.shade100,
       appBar: AppBar(
-        title: Text("Quiz O'yini", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Quiz O'yini",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.blueAccent,
       ),
       body: Consumer<QuestProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (provider.questions.isEmpty) {
-            return Center(
+            return const Center(
               child: Text(
                 "❌ Savollar topilmadi!",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
               ),
             );
           }
 
           var question = provider.questions[provider.currentQuestionIndex];
+
           return Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ⏳ Progress bar
                 LinearProgressIndicator(
-                  value: (provider.currentQuestionIndex + 1) / provider.questions.length,
+                  borderRadius: BorderRadius.circular(10.r),
+                  value: (provider.currentQuestionIndex + 1) /
+                      provider.questions.length,
                   color: Colors.green,
                   backgroundColor: Colors.white,
-                  minHeight: 8,
+                  minHeight: 20,
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 20.h),
 
                 // 🕒 Timer
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    "⏳ Qolgan vaqt: ${provider.quesTime}s",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                    "⏳ Time: ${provider.quesTime}s",
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red),
                   ),
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 20.h),
 
-                // ❓ Savol kartasi
-                Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  elevation: 8,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      question['question'],
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20),
-
-                // 🔘 Variantlar
-                ...question['options'].map<Widget>((option) {
-                  bool isCorrect = provider.isAnswered && option == question['correctAnswer'];
-                  bool isWrong = provider.isAnswered && option != question['correctAnswer'];
-
-                  return AnimatedContainer(
-                    duration: Duration(milliseconds: 500),
-                    margin: EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color: isCorrect ? Colors.green : isWrong ? Colors.red : Colors.white,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 4, spreadRadius: 2),
-                      ],
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        option,
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                // ❓ Savol bloki
+                Container(
+                  width: double.infinity,
+                  height: 150.h,
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      const BoxShadow(
+                        offset: Offset(2, 4),
+                        blurRadius: 7,
+                        spreadRadius: 2,
                       ),
-                      onTap: provider.isAnswered
-                          ? null // ✅ Agar javob berilgan bo‘lsa, bosish mumkin emas
-                          : () {
-                              provider.answerQuestion(option);
-                            },
+                    ],
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomText(
+                        text: "Question: ${provider.currentQuestionIndex + 1}",
+                        color: Colors.green,
+                        size: 40.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      SizedBox(height: 15.h),
+                      CustomText(
+                        text: question['question'],
+                        size: 35.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 50.h),
+
+                // ✅ Variantlar (to‘g‘ri ishlaydigan)
+                Expanded(
+                  child: GridView.builder(
+                    itemCount: question['options'].length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 30,
+                      childAspectRatio: 1.5,
                     ),
-                  );
-                }).toList(),
+                    itemBuilder: (context, index) {
+                      String option = question['options'][index];
+                      bool isCorrect = provider.isAnswered &&
+                          option == question['correctAnswer'];
+                      bool isWrong = provider.isAnswered &&
+                          option != question['correctAnswer'];
+
+                      return AnswerOptionButton(
+  option: option,
+  correctAnswer: question['answer'],
+  selectedAnswer: provider.selectedAnswer,
+  isAnswered: provider.isAnswered,
+  isEnabled: !provider.isAnswered,
+  onTap: () => provider.answerQuestion(option),
+);
+                    },
+                  ),
+                ),
               ],
             ),
           );
